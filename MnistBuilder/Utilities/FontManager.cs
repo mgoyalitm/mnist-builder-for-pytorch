@@ -1,13 +1,11 @@
-﻿using SkiaSharp;
-
-namespace MNIST.Utilities;
+﻿namespace MNIST.Utilities;
 
 public static class FontManager
 {
     public const string Characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     public const int CharacterCount = 62;
-    public const int MinRotation = -20;
-    public const int MaxRotation = 20;
+    public const int MinRotation = -15;
+    public const int MaxRotation = 15;
     public const int RotationStepSize = 5;
     public const int RotationSteps = (MaxRotation - MinRotation) / RotationStepSize;
     public const int CharSize = 21;
@@ -17,6 +15,10 @@ public static class FontManager
     private const string FileTag = @"filename:";
     private const string StyleTag = @"style:";
     private const string WeightTag = @"weight:";
+    private const int draw_length = CharSize * 12;
+    private const int semi_draw_length = draw_length / 2;
+    private const int text_draw_length = draw_length / 3;
+    private const byte black_threshold = 96;
 
     public static async IAsyncEnumerable<FontModel> DiscoverFontsAsync(string directory, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
@@ -121,6 +123,15 @@ public static class FontManager
         }
     }
 
+
+    public static SKColorFilter CreateContrastFilter(float intensity)
+    {
+        intensity = Math.Max(0f, intensity);
+        float bias = (1f - intensity) * 128f;
+        float[] matrix = [intensity, 0, 0, 0, bias, 0, intensity, 0, 0, bias, 0, 0, intensity, 0, bias, 0, 0, 0, 1, 0];
+        return SKColorFilter.CreateColorMatrix(matrix);
+    }
+
     public static async Task WriteMNISTAsync(string font_directory, FontModel[] fonts, IProgress<int> progress, CancellationToken cancellationToken = default)
     {
         const int threads = 31;
@@ -134,7 +145,8 @@ public static class FontManager
         using SKPaint paint = new()
         {
             Color = SKColors.Black,
-            IsAntialias = true
+            IsAntialias = false,
+            ColorFilter = CreateContrastFilter(32)
         };
 
         for (int i = 0; i < fonts.Length; i++)
@@ -148,67 +160,73 @@ public static class FontManager
             {
                 continue;
             }
-
-            string directory = Path.Combine(font_directory, font.Category.ToString().ToLower().Replace('_', '-'), font.Style.ToString());
+            string category = font.Category.ToString().ToLower().Replace('_', '-');
+            string style = font.Style.ToString().ToLower();
             string font_name = Path.GetFileNameWithoutExtension(font.Path);
 
             using SKTypeface typeface = SKTypeface.FromFile(font.Path);
-            using SKFont sk_font = new(typeface, 32);
-            float offset_rotation = font.Style is FontStyle.Italic ? -7.5f : 0f;
-            tasks.Clear();
+            using SKFont sk_font = new(typeface, text_draw_length);
+            float offset_rotation = font.Style is FontStyle.Italic ? -RotationStepSize : 0f;
 
-            for (int m = 0; m < RotationSteps; m++)
+            for (int n = 0; n < CharacterCount; n++)
             {
-                for (int n = 0; n < CharacterCount; n++)
+                char character = Characters[n];
+
+                for (int m = 0; m < RotationSteps; m++)
                 {
-                    char character = Characters[n];
                     await semaphore.WaitAsync(cancellationToken);
                     progress?.Report(++current);
 
                     float rotation = MinRotation + m * RotationStepSize + offset_rotation;
-                    string character_file = Path.Combine(directory, character.ToString(), $"{font_name}-{m:D3}.jpg");
+                    string char_folder = char.IsDigit(character) ? $"digit_{character}" : (char.IsUpper(character) ? $"upper_{char.ToUpperInvariant(character)}" : $"lower_{char.ToLowerInvariant(character)}");
 
-                    Task task = Task.Run(() =>
-                    {
-                        Directory.CreateDirectory(Path.GetDirectoryName(character_file));
-                        using SemaphoreRelease release = new(semaphore);
-                        using SKBitmap bitmap = new(48, 48);
-                        using SKCanvas canvas = new(bitmap);
-
-                        canvas.Clear(SKColors.Transparent);
-                        canvas.Save();
-                        canvas.Translate(24, 24);
-                        canvas.RotateDegrees(rotation);
-                        canvas.DrawText(character.ToString(), 0, 0, sk_font, paint);
-                        canvas.Restore();
-
-                        SKRectI bounding_box = GetBounds(bitmap);
-                        float scale = Math.Min((float)CharSize / bounding_box.Width, (float)CharSize / bounding_box.Height);
-
-                        int width = Math.Min(CharSize, (int)(scale * bounding_box.Width));
-                        int height = Math.Min(CharSize, (int)(scale * bounding_box.Height));
-
-                        using SKBitmap char_bitmap = new(CharSize, CharSize);
-                        using SKCanvas char_canvas = new(char_bitmap);
-                        char_canvas.Clear(SKColors.White);
-
-                        int x_shift = (CharSize - width) / 2;
-                        int y_shift = (CharSize - height) / 2;
-
-                        SKRectI placement = new(x_shift, y_shift, x_shift + width, y_shift + height);
-                        char_canvas.DrawBitmap(bitmap, bounding_box, placement);
-                        using SKImage image = SKImage.FromBitmap(char_bitmap);
-                        using SKData image_data = image.Encode(SKEncodedImageFormat.Jpeg, 100);
-                        using Stream stream = File.OpenWrite(character_file);
-                        image_data.SaveTo(stream);
-                    }, cancellationToken);
-
+                    string character_file = Path.Combine(font_directory, char_folder, $"{font_name}-({rotation}°)[{category},{style}, {font.Weight}].png");
+                    Task task = Task.Run(() => WriteCharFile(character_file, character, rotation, semaphore, sk_font, paint), cancellationToken);
                     tasks.Add(task);
                 }
             }
 
             await Task.WhenAll(tasks);
+            tasks.Clear();
         }
+    }
+
+    private static void WriteCharFile(string character_file, char character, float rotation, SemaphoreSlim semaphore, SKFont sk_font, SKPaint paint)
+    {
+
+        Directory.CreateDirectory(Path.GetDirectoryName(character_file));
+        using SemaphoreRelease release = new(semaphore);
+        using SKBitmap bitmap = new(draw_length, draw_length);
+        using SKCanvas canvas = new(bitmap);
+
+        canvas.Clear(SKColors.White);
+        canvas.Save();
+        canvas.Translate(semi_draw_length, semi_draw_length);
+        canvas.RotateDegrees(rotation);
+        canvas.DrawText(character.ToString(), 0, 0, sk_font, paint);
+        canvas.Restore();
+
+        SKRectI bounding_box = GetBounds(bitmap);
+        float scale = Math.Min((float)CharSize / bounding_box.Width, (float)CharSize / bounding_box.Height);
+
+        int width = Math.Min(CharSize, (int)(scale * bounding_box.Width));
+        int height = Math.Min(CharSize, (int)(scale * bounding_box.Height));
+
+        Binarize(bitmap, bounding_box);
+
+        using SKBitmap char_bitmap = new(CharSize, CharSize);
+        using SKCanvas char_canvas = new(char_bitmap);
+        char_canvas.Clear(SKColors.White);
+
+        int x_shift = (CharSize - width) / 2;
+        int y_shift = (CharSize - height) / 2;
+
+        SKRectI placement = new(x_shift, y_shift, x_shift + width, y_shift + height);
+        char_canvas.DrawBitmap(bitmap, bounding_box, placement);
+        Binarize(bitmap, new SKRectI(0,0, CharSize, CharSize));
+        using SKImage image = SKImage.FromBitmap(char_bitmap);
+        using SKData image_data = image.Encode(SKEncodedImageFormat.Png, 100);
+        File.WriteAllBytes(character_file, image_data.ToArray());
     }
 
     private static SKRectI GetBounds(SKBitmap bitmap)
@@ -223,8 +241,9 @@ public static class FontManager
             for (int y = 0; y < bitmap.Height; y++)
             {
                 SKColor color = bitmap.GetPixel(x, y);
+                byte brightness = (byte)((color.Alpha * (0.299f * color.Red + 0.587f * color.Green + 0.114f * color.Blue)) / 255);
 
-                if (color.Alpha > 25)
+                if (brightness < black_threshold)
                 {
                     x_min = Math.Min(x, x_min);
                     y_min = Math.Min(y, y_min);
@@ -235,5 +254,19 @@ public static class FontManager
         }
 
         return x_max < x_min || y_max < y_min ? SKRectI.Empty : new SKRectI(x_min, y_min, x_max + 1, y_max + 1);
+    }
+
+    private static void Binarize(SKBitmap bitmap, SKRectI bounding_box)
+    {
+        for (int x = bounding_box.Left; x < bounding_box.Right; x++)
+        {
+            for (int y = bounding_box.Top; y < bounding_box.Bottom; y++)
+            {
+                SKColor color = bitmap.GetPixel(x, y);
+                byte brightness = (byte)((color.Alpha * (0.299f * color.Red + 0.587f * color.Green + 0.114f * color.Blue)) / 255);
+                SKColor binarized_color = brightness < black_threshold ? SKColors.Black : SKColors.White;
+                bitmap.SetPixel(x, y, binarized_color);
+            }
+        }
     }
 }

@@ -1,8 +1,10 @@
 ﻿namespace MNIST.ViewModel;
-public class FontController : INotifyPropertyChanged
+
+public partial class FontController : INotifyPropertyChanged
 {
     private FontModel[] availableFonts = [];
     private int selectedFontIndex;
+    private bool fontsLoaded;
     private readonly SemaphoreSlim semaphoreInitialize = new(1);
     private readonly SemaphoreSlim semaphoreGenerate = new(1);
 
@@ -13,7 +15,7 @@ public class FontController : INotifyPropertyChanged
         MainViewModel = viewModel;
         FontBucket = [];
         ChangeFontCommand = new ChangeFontCommand(this);
-        AddFontToBucketCommand = new AddFontToBucket(this);
+        AddFontToBucketCommand = new AddFontToBucketCommand(this);
         DeleteFontCommand = new DeleteFontCommand(this);
         ClearBucketCommand = new ClearBucketCommand(this);
         GenerateMNISTCommand = new GenerateMNISTCommand(this);
@@ -26,13 +28,26 @@ public class FontController : INotifyPropertyChanged
     public ICommand ClearBucketCommand { get; }
     public ICommand GenerateMNISTCommand { get; }
 
+    public bool FontsLoaded
+    {
+        get => fontsLoaded;
+        set
+        {
+            if (value != fontsLoaded)
+            {
+                fontsLoaded = value;
+                OnPropertyChanged(nameof(FontsLoaded));
+            }
+        }
+    }
+
     public int SelectedFontIndex
     {
         get => selectedFontIndex;
         set
         {
             value = availableFonts.Length == 0 ? 0 : value % availableFonts.Length;
-            
+
             if (value < 0)
             {
                 value = availableFonts.Length < 1 ? 0 : value + availableFonts.Length;
@@ -69,15 +84,20 @@ public class FontController : INotifyPropertyChanged
 
     public ObservableCollection<FontModel> FontBucket { get; }
 
-    public async Task InitializeFontsAsync(string directory, CancellationToken cancellationToken = default)
+    public async Task InitializeFontsAsync(CancellationToken cancellationToken = default)
     {
+        if (Path.Exists(App.RepositoryPath) is false)
+        {
+            return;
+        }
+
         try
         {
             await semaphoreInitialize.WaitAsync(cancellationToken);
-            
+
             List<FontModel> fonts = [];
-            
-            await foreach (FontModel font in FontManager.DiscoverFontsAsync(directory, cancellationToken))
+
+            await foreach (FontModel font in FontManager.DiscoverFontsAsync(App.RepositoryPath, cancellationToken))
             {
                 fonts.Add(font);
             }
@@ -89,11 +109,12 @@ public class FontController : INotifyPropertyChanged
         }
         catch (Exception)
         {
-            MainViewModel.StatusMessage = $"Failed to load font repository: {directory}";
+            MainViewModel.StatusMessage = $"Failed to load font repository: {App.RepositoryPath}";
         }
         finally
         {
             semaphoreInitialize.Release();
+            FontsLoaded = AvailableFonts.Length > 0;
         }
     }
 

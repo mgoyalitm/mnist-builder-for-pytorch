@@ -1,7 +1,6 @@
 ﻿namespace MNIST.ViewModel;
-public class MainViewModel : INotifyPropertyChanged
+public partial class MainViewModel : INotifyPropertyChanged
 {
-    private string font_directory = @"C:\Repositories\google-fonts";
     private string statusMessage;
 
     public event PropertyChangedEventHandler PropertyChanged;
@@ -9,12 +8,6 @@ public class MainViewModel : INotifyPropertyChanged
     public MainViewModel()
     {
         FontController = new(this);
-
-        action();
-        async void action() 
-        { 
-            await FontController.InitializeFontsAsync(font_directory); 
-        }
     }
 
     public FontController FontController { get; }

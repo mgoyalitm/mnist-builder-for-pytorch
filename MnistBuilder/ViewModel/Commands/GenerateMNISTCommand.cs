@@ -7,7 +7,6 @@ public class GenerateMNISTCommand(FontController controller) : IProgress<int>, I
     private bool isRunning;
     private int total;
     private int current;
-    private string directory = @"C:\Repositories\mnist-data";
     
     public event PropertyChangedEventHandler PropertyChanged;
     public event EventHandler CanExecuteChanged;
@@ -54,6 +53,19 @@ public class GenerateMNISTCommand(FontController controller) : IProgress<int>, I
     public bool CanExecute(object _) => IsExecuting == false;
     public async void Execute(object _)
     {
+        if (Path.Exists(App.DestinationPath) is false)
+        {
+            if (App.Current.Resources[nameof(BrowseMnistDirectoryCommand)] is BrowseMnistDirectoryCommand command)
+            {
+                command.Execute(null);
+            }
+        }
+
+        if (Path.Exists(App.DestinationPath) is false)
+        {
+            return;
+        }
+
         try
         {
             FontModel[] fonts = [.. _controller.FontBucket];
@@ -61,11 +73,25 @@ public class GenerateMNISTCommand(FontController controller) : IProgress<int>, I
             Total = fonts.Length * FontManager.CharacterCount * FontManager.RotationSteps;
             IsExecuting = true;
             CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-            await FontManager.WriteMNISTAsync(directory,fonts, this);
+
+            await Task.Run(() => 
+            {
+                foreach (string file in Directory.GetFiles(App.DestinationPath))
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                    File.Delete(file);
+                }
+
+                foreach (string directory in Directory.GetDirectories(App.DestinationPath))
+                {
+                    Directory.Delete(directory, true);
+                }
+            });
+            await FontManager.WriteMNISTAsync(App.DestinationPath,fonts, this);
         }
         finally
         {
-            await Task.Delay(1000);
+            await Task.Delay(250);
             IsExecuting = false;
             Current = 0;
             Total = 0;

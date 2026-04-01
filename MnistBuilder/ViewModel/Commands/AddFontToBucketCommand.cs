@@ -1,11 +1,11 @@
 ﻿namespace MNIST.ViewModel.Commands;
-public class AddFontToBucket : ICommand
+public class AddFontToBucketCommand : ICommand
 {
     private readonly FontController _controller;
     public event EventHandler CanExecuteChanged { add { } remove { } }
 
     [SuppressMessage("Style", "IDE0290:Use primary constructor", Justification = "<Pending>")]
-    public AddFontToBucket(FontController controller)
+    public AddFontToBucketCommand(FontController controller)
     {
         _controller = controller;
     }

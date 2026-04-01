@@ -5,15 +5,20 @@
     xmlns:local="clr-namespace:MNIST"
     xmlns:converters="clr-namespace:MNIST.Converters"
     xmlns:viewmodel="clr-namespace:MNIST.ViewModel"
+    xmlns:commands="clr-namespace:MNIST.ViewModel.Commands"
     StartupUri="View/MainWindow.xaml">
-    
+
     <Application.Resources>
         <ResourceDictionary>
             <FontFamily x:Key="AliasFont">./Resources/#Alias</FontFamily>
             <converters:FontFamilyConverter x:Key="FontFamilyConverter"/>
             <converters:FontStyleConverter x:Key="FontStyleConverter"/>
             <converters:FontWeightConverter x:Key="FontWeightConverter"/>
+            <converters:BoolToVisibilityConverter IsInverted="True" x:Key="InvertedBooleanToVisibilityConverter"/>
+            <converters:BoolToVisibilityConverter IsInverted="False" x:Key="BooleanToVisibilityConverter"/>
             <viewmodel:MainViewModel x:Key="ViewModel"/>
+            <commands:OpenRepositoryCommand x:Key="OpenRepositoryCommand"/>
+            <commands:BrowseMnistDirectoryCommand x:Key="BrowseMnistDirectoryCommand"/>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Style/Theme.xaml" />
             </ResourceDictionary.MergedDictionaries>

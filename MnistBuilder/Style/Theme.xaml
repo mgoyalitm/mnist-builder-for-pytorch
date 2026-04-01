@@ -1,7 +1,104 @@
 ﻿<ResourceDictionary 
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <SolidColorBrush x:Key="AccentBrush" Color="Gold"/>
-    <SolidColorBrush Color="#2B2B2B" x:Key="BackgroundBrush"/>
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:control="clr-namespace:MNIST.Controls">
+    <SolidColorBrush x:Key="AccentBrushLight" Color="Gold"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="Goldenrod"/>
+    <SolidColorBrush x:Key="AccentBrushDark" Color="DarkGoldenrod"/>
+    
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#2B2B2B"/>
+    <SolidColorBrush x:Key="LightBackgroundBrush" Color="#303030"/>
+    <SolidColorBrush x:Key="DarkBackgroundBrush" Color="#202020"/>
+    <SolidColorBrush x:Key="PitchBlackBackgroundBrush" Color="#000000"/>
+    
+    <SolidColorBrush x:Key="LightForegroundBrush" Color="#A2FFFFFF"/>
+    <SolidColorBrush x:Key="DarkForegroundBrush" Color="#202020"/>
+    <SolidColorBrush x:Key="GrayForegroundBrush" Color="#A2A2A2"/>
+    <SolidColorBrush x:Key="DarkGrayForegroundBrush" Color="#727272"/>
+    <SolidColorBrush x:Key="PreviewFontForegroundBrush" Color="#FFFFFF"/>
 
+    <Style TargetType="control:HelpItemControl">
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="control:HelpItemControl">
+                    <Grid Margin="10,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto" />
+                            <RowDefinition Height="auto" />
+                        </Grid.RowDefinitions>
+                        <Border
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            CornerRadius="2"
+                            Padding="8,3"
+                            BorderThickness="1"
+                            Background="{StaticResource AccentBrush}"
+                            BorderBrush="{StaticResource AccentBrushDark}">
+                            <TextBlock
+                                FontSize="14"
+                                FontWeight="Bold"
+                                Opacity="1"
+                                Text="{TemplateBinding HelpKey}"/>
+                        </Border>
+                        <TextBlock 
+                            HorizontalAlignment="Center"
+                            TextAlignment="Center"
+                            Margin="0,5,0,0"
+                            FontSize="13"
+                            Foreground="{StaticResource DarkGrayForegroundBrush}"
+                            Grid.Row="1" 
+                            Text="{TemplateBinding HelpText}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="HelpItemLongStyle" TargetType="control:HelpItemControl">
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Top" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="control:HelpItemControl">
+                    <Grid Opacity="1" Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border
+                            Opacity="1"
+                            VerticalAlignment="Top"
+                            HorizontalAlignment="Right"
+                            CornerRadius="2"
+                            Padding="10,4"
+                            BorderThickness="1"
+                            BorderBrush="{StaticResource AccentBrushDark}"
+                            Background="{StaticResource AccentBrushLight}">
+                            <TextBlock
+                                FontSize="20"
+                                FontWeight="Bold"
+                                Opacity="1"
+                                Text="{TemplateBinding HelpKey}"/>
+                        </Border>
+                        <TextBlock 
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            TextAlignment="Left"
+                            FontSize="18"
+                            Foreground="{StaticResource LightForegroundBrush}"
+                            Grid.Column="2" 
+                            Text="{TemplateBinding HelpText}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

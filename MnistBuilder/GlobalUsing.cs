@@ -10,3 +10,4 @@ global using System.ComponentModel;
 global using System.IO;
 global using System.Runtime.CompilerServices;
 global using MNIST.ViewModel.Commands;
+global using SkiaSharp;
