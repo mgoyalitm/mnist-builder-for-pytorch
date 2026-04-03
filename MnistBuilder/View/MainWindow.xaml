@@ -148,7 +148,7 @@
                             TextAlignment="Center"
                             FontWeight="{Binding SelectedFont.Weight, Converter={StaticResource FontWeightConverter}, Mode=OneWay}"
                             FontStyle="{Binding SelectedFont.Style, Converter={StaticResource FontStyleConverter}, Mode=OneWay}"
-                            FontFamily="{Binding SelectedFont, Converter={StaticResource FontFamilyConverter}, Mode=OneWay}"
+                            FontFamily="{Binding SelectedFont.Path, Converter={StaticResource FontFamilyConverter}, Mode=OneWay}"
                             HorizontalAlignment="Center">
                             <Run Text="the quick brown fox jumps over the lazy dog"/>
                             <LineBreak/>
@@ -254,7 +254,7 @@
                                     CommandParameter="{Binding Path, Mode=OneWay}"
                                     FontWeight="{Binding Weight, Converter={StaticResource FontWeightConverter}, Mode=OneWay}"
                                     FontStyle="{Binding Style, Converter={StaticResource FontStyleConverter}, Mode=OneWay}"
-                                    FontFamily="{Binding Converter={StaticResource FontFamilyConverter}, Mode=OneWay}"
+                                    FontFamily="{Binding Path, Converter={StaticResource FontFamilyConverter}, Mode=OneWay}"
                                     Background="{StaticResource DarkBackgroundBrush}"
                                     Foreground="{StaticResource LightForegroundBrush}"/>
                             </DataTemplate>
@@ -344,13 +344,15 @@
                 HelpKey="Ctrl + F"
                 HelpText="Open Filters"/>
         </Grid>
-        <!-- Help Panel Full -->
+        <!-- Pre Initalization View -->
         <Grid
             Grid.Row="1"
             Grid.RowSpan="3"
             Visibility="{Binding FontsLoaded, Converter={StaticResource InvertedBooleanToVisibilityConverter}, Mode=OneWay}"
             Background="{StaticResource LightBackgroundBrush}">
+            <!-- Help Panel Full -->
             <Grid
+                Visibility="{Binding FontLoading, Converter={StaticResource InvertedBooleanToVisibilityConverter}, Mode=OneWay}"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center">
                 <Grid.RowDefinitions>
@@ -411,6 +413,40 @@
                     HelpKey="Ctrl + F"
                     Style="{StaticResource HelpItemLongStyle}"
                     HelpText="Open Filters"/>
+            </Grid>
+            <Grid
+                Width="600"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Visibility="{Binding FontLoading, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="2*" />
+                    <RowDefinition Height="30" />
+                    <RowDefinition Height="30" />
+                    <RowDefinition Height="3*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="540" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock 
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Center"
+                    TextAlignment="Center"
+                    FontSize="20"
+                    Foreground="{StaticResource AccentBrush}"
+                    Text="Please wait while fonts are being loaded."/>
+                <ProgressBar
+                    Grid.Row="2"
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Center"
+                    Height="4"
+                    Foreground="{StaticResource AccentBrushDark}"
+                    IsIndeterminate="True"/>
             </Grid>
         </Grid>
     </Grid>

@@ -2,6 +2,7 @@
 using MNIST.View.Dialogs;
 using System.Configuration;
 using System.Windows;
+using System.Windows.Media;
 using System.Xml;
 
 namespace MNIST;
@@ -25,6 +26,9 @@ public partial class App : Application
     public static ViewModel.MainViewModel ViewModel { get; private set; }
     public static string RepositoryPath { get; set; }
     public static string DestinationPath { get; set; }
+
+    private static readonly Dictionary<string, FontFamily> font_registry = [];
+    private static readonly Dictionary<string, GlyphTypeface> typeface_registry = [];
 
     protected override void OnActivated(EventArgs e)
     {
@@ -74,12 +78,12 @@ public partial class App : Application
             configXml.Load(config.FilePath);
             XmlElement bucket = configXml.DocumentElement.SelectSingleNode(FontBucketKey) as XmlElement;
             XmlElement filters = configXml.DocumentElement.SelectSingleNode(FilterKey) as XmlElement;
-            
+
             List<Model.FontStyle> styles = [];
             List<Model.FontWeight> weights = [];
             List<FontCategory> categories = [];
 
-            if (filters.SelectSingleNode(FilteredPreviewKey) is XmlElement preview_element && 
+            if (filters.SelectSingleNode(FilteredPreviewKey) is XmlElement preview_element &&
                 bool.TryParse(preview_element.GetAttribute(ValueKey), out bool apply_filter))
             {
                 viewModel.FilterViewModel.ShowFilteredResults = apply_filter;
@@ -156,7 +160,7 @@ public partial class App : Application
         preview = configXml.CreateElement(FilteredPreviewKey);
         preview.SetAttribute(ValueKey, ViewModel.FilterViewModel.ShowFilteredResults.ToString());
         filters.AppendChild(preview);
-        
+
         foreach (Model.FontStyle style in ViewModel.FilterViewModel.SelectedFontStyles.Cast<Model.FontStyle>())
         {
             XmlElement element = configXml.CreateElement(StyleKey);
@@ -238,5 +242,83 @@ public partial class App : Application
     {
         FilterWindow filter = new();
         filter.ShowDialog();
+    }
+
+    public static FontFamily GetFontFamily(string path)
+    {
+        if (font_registry.TryGetValue(path, out FontFamily family))
+        {
+            return family;
+        }
+
+        GlyphTypeface glyph = GetTypeface(path);
+
+        if (glyph is null)
+        {
+            return null;
+        }
+
+        bool isValid = true;
+
+        Parallel.ForEach(FontManager.Characters, (character, state) =>
+        {
+            if (glyph.CharacterToGlyphMap.TryGetValue(character, out ushort index) is false || index == 0)
+            {
+                isValid = false;
+                return;
+            }
+
+            if (glyph.AdvanceWidths.TryGetValue(index, out double width) is false || width <= 0d)
+            {
+                isValid = false;
+                return;
+            }
+
+            Geometry shape = glyph.GetGlyphOutline(index, 100, 100);
+
+            if (shape.Bounds.Width == 0 || shape.Bounds.Height == 0)
+            {
+                isValid = false;
+                return;
+            }
+        });
+
+        if (isValid is false)
+        {
+            return null;
+        }
+
+        string name = glyph.FamilyNames.Values.FirstOrDefault();
+
+        if (string.IsNullOrWhiteSpace(name) is false)
+        {
+            string folder = Path.GetDirectoryName(path);
+            Uri uri = new($"file:///{folder.Replace("\\", "/")}/");
+            FontFamily font_family = new(uri, $"./#{name}");
+            font_registry[path] = font_family;
+            return font_family;
+        }
+
+        return null;
+    }
+
+    public static GlyphTypeface GetTypeface(string path)
+    {
+        if (typeface_registry.TryGetValue(path, out GlyphTypeface typeface))
+        {
+            return typeface;
+        }
+
+        try
+        {
+            Uri uri = new(path, UriKind.Absolute);
+            typeface = new(uri);
+            typeface_registry[path] = typeface;
+            return typeface;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 }

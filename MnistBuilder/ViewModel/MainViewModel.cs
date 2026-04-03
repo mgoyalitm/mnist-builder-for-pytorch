@@ -1,9 +1,11 @@
 ﻿namespace MNIST.ViewModel;
+
 public partial class MainViewModel : INotifyPropertyChanged
 {
     private FontModel[] availableFonts = [];
     private int selectedFontIndex;
     private bool fontsLoaded;
+    private bool fontLoading;
     private readonly SemaphoreSlim semaphoreInitialize = new(1);
     public event PropertyChangedEventHandler PropertyChanged;
 
@@ -35,6 +37,19 @@ public partial class MainViewModel : INotifyPropertyChanged
             {
                 fontsLoaded = value;
                 OnPropertyChanged(nameof(FontsLoaded));
+            }
+        }
+    }
+
+    public bool FontLoading
+    {
+        get => fontLoading;
+        set
+        {
+            if (value != fontLoading)
+            {
+                fontLoading = value;
+                OnPropertyChanged(nameof(FontLoading));
             }
         }
     }
@@ -93,15 +108,19 @@ public partial class MainViewModel : INotifyPropertyChanged
         try
         {
             await semaphoreInitialize.WaitAsync(cancellationToken);
+            FontsLoaded = false;
+            FontLoading = true;
             List<FontModel> fonts = [];
 
             await foreach (FontModel font in FontManager.DiscoverFontsAsync(App.RepositoryPath, cancellationToken))
             {
-                fonts.Add(font);
+                if (await Task.Run(() => App.GetFontFamily(font.Path)) is not null)
+                {
+                    fonts.Add(font);
+                }
             }
 
             AvailableFonts = [.. fonts.OrderBy(x => x.Name)];
-            SelectedFontIndex = 0;
             await Task.Delay(10, cancellationToken);
             OnPropertyChanged(nameof(SelectedFont));
         }
@@ -112,7 +131,9 @@ public partial class MainViewModel : INotifyPropertyChanged
         finally
         {
             semaphoreInitialize.Release();
+            FontLoading = false;
             FontsLoaded = AvailableFonts.Length > 0;
+
         }
     }
 
