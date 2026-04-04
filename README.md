@@ -1,6 +1,6 @@
 # MNIST Builder for PyTorch
 
-<img src="assets/images/app.png" width="800"/>
+<img src="assets/images/app.png" width="100%"/>
 
 Windows tool for generating MNIST-style character datasets from font files. It works specifically with the Google Fonts repository structure, so the Google Fonts Git repository is required as input.
 
