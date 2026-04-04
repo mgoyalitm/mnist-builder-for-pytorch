@@ -130,7 +130,7 @@ The application loads fonts, renders glyphs across digits, lowercase, and upperc
 
 ## Keyboard Shortcuts
 
-### Application Main Window
+#### Application Main Window
 
 | **Key** | Action |
 |-----|--------|
@@ -143,14 +143,14 @@ The application loads fonts, renders glyphs across digits, lowercase, and upperc
 | Shift + Delete | Clear all fonts from the bucket (with confirmation) |
 | Ctrl + F | Open the filter dialog |
 
-### Filter Dialog
+#### Filter Dialog
 | Key | Action |
 |-----|--------|
 | Enter | Import all fonts matching the selected filter criteria into the bucket |
 | Delete | Remove all fonts from the bucket that match the current filter criteria |
 | Esc | Close the filter dialog |
 
-### Confirm Dialog
+#### Confirm Dialog
 | Key | Action |
 |-----|--------|
 | Enter | Confirm action (equivalent to clicking **Yes**) |
