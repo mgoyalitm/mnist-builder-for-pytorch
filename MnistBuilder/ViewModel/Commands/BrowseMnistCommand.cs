@@ -1,6 +1,6 @@
 ﻿using Microsoft.Win32;
 namespace MNIST.ViewModel.Commands;
-public class BrowseMnistDirectoryCommand : ICommand
+public class BrowseMnistCommand : ICommand
 {
     private readonly SemaphoreSlim semaphore = new(1);
     public event EventHandler CanExecuteChanged { add { } remove { } }
@@ -11,16 +11,18 @@ public class BrowseMnistDirectoryCommand : ICommand
         try
         {
             await semaphore.WaitAsync();
-
-            OpenFolderDialog dialog = new()
+            
+            SaveFileDialog dialog = new()
             {
-                Title = "Browse MNIST dataset directory",
-                Multiselect = false,
+                Filter = "ZIP Archive (*.zip)|*.zip",
+                DefaultExt = ".zip",
+                AddExtension = true,
+                FileName = "mnist.zip"
             };
 
             if (dialog.ShowDialog(App.Current.MainWindow) is true)
             {
-                App.DestinationPath = dialog.FolderName;
+                App.DestinationZipPath = dialog.FileName;
             }
         }
         finally

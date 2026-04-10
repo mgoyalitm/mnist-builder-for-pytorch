@@ -25,7 +25,7 @@ public partial class App : Application
 
     public static ViewModel.MainViewModel ViewModel { get; private set; }
     public static string RepositoryPath { get; set; }
-    public static string DestinationPath { get; set; }
+    public static string DestinationZipPath { get; set; }
 
     private static readonly Dictionary<string, FontFamily> font_registry = [];
     private static readonly Dictionary<string, GlyphTypeface> typeface_registry = [];
@@ -53,7 +53,7 @@ public partial class App : Application
             ViewModel = viewModel;
             Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
             RepositoryPath = config.AppSettings.Settings[RepositoryKey].Value;
-            DestinationPath = config.AppSettings.Settings[DestinationKey].Value;
+            DestinationZipPath = config.AppSettings.Settings[DestinationKey].Value;
             await viewModel.InitializeFontsAsync();
             string selected_font_path = config.AppSettings.Settings[SelectedFontKey].Value;
 
@@ -145,7 +145,7 @@ public partial class App : Application
 
         Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
         config.AppSettings.Settings[RepositoryKey].Value = RepositoryPath;
-        config.AppSettings.Settings[DestinationKey].Value = DestinationPath;
+        config.AppSettings.Settings[DestinationKey].Value = DestinationZipPath;
         config.AppSettings.Settings[SelectedFontKey].Value = ViewModel.SelectedFont?.Path;
         config.Save();
 

@@ -37,7 +37,7 @@
         <KeyBinding
             Key="S"
             Modifiers="Ctrl"
-            Command="{StaticResource BrowseMnistDirectoryCommand}"/>
+            Command="{StaticResource BrowseMnistCommand}"/>
         <KeyBinding 
             Key="Return" 
             Command="{Binding AddFontToBucketCommand}" 

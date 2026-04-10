@@ -50,41 +50,32 @@ public class GenerateMNISTCommand: IProgress<int>, ICommand, INotifyPropertyChan
     public bool CanExecute(object _) => IsExecuting == false;
     public async void Execute(object _)
     {
-        if (Path.Exists(App.DestinationPath) is false)
+        if (ValidateZipPath() is false)
         {
-            if (App.Current.Resources[nameof(BrowseMnistDirectoryCommand)] is BrowseMnistDirectoryCommand command)
+            if (App.Current.Resources[nameof(BrowseMnistCommand)] is BrowseMnistCommand command)
             {
                 command.Execute(null);
             }
-        }
 
-        if (Path.Exists(App.DestinationPath) is false)
-        {
-            return;
+            if (ValidateZipPath() is false)
+            {
+                return;
+            }
         }
 
         try
         {
+            if (File.Exists(App.DestinationZipPath))
+            {
+                File.Delete(App.DestinationZipPath);
+            }
+
             FontModel[] fonts = [.. App.ViewModel.FontBucket];
             Current = 0;
             Total = fonts.Length * FontManager.CharacterCount * FontManager.RotationSteps;
             IsExecuting = true;
             CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-
-            await Task.Run(() => 
-            {
-                foreach (string file in Directory.GetFiles(App.DestinationPath))
-                {
-                    File.SetAttributes(file, FileAttributes.Normal);
-                    File.Delete(file);
-                }
-
-                foreach (string directory in Directory.GetDirectories(App.DestinationPath))
-                {
-                    Directory.Delete(directory, true);
-                }
-            });
-            await FontManager.WriteMNISTAsync(App.DestinationPath,fonts, this);
+            await FontManager.WriteMNISTAsync(App.DestinationZipPath, fonts, this);
         }
         finally
         {
@@ -100,4 +91,17 @@ public class GenerateMNISTCommand: IProgress<int>, ICommand, INotifyPropertyChan
         => PropertyChanged?.Invoke(this, new(propertyName));
 
     public void Report(int value) => Current = value;
+
+
+    private bool ValidateZipPath()
+    {
+        try
+        {
+            return string.IsNullOrWhiteSpace(Path.GetFullPath(App.DestinationZipPath)) is false;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 }

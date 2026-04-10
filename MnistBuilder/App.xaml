@@ -18,7 +18,7 @@
             <converters:BoolToVisibilityConverter IsInverted="False" x:Key="BooleanToVisibilityConverter"/>
             <viewmodel:MainViewModel x:Key="ViewModel"/>
             <commands:OpenRepositoryCommand x:Key="OpenRepositoryCommand"/>
-            <commands:BrowseMnistDirectoryCommand x:Key="BrowseMnistDirectoryCommand"/>
+            <commands:BrowseMnistCommand x:Key="BrowseMnistCommand"/>
             <commands:FilterCommand x:Key="FilterCommand"/>
             <commands:SelectFontCommand x:Key="SelectFontCommand"/>
             <commands:BulkImportCommand x:Key="BulkImportCommand"/>

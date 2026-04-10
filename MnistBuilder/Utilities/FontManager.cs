@@ -1,4 +1,6 @@
-﻿namespace MNIST.Utilities;
+﻿using System.IO.Compression;
+
+namespace MNIST.Utilities;
 
 public static class FontManager
 {
@@ -18,7 +20,7 @@ public static class FontManager
     private const int draw_length = CharSize * 12;
     private const int semi_draw_length = draw_length / 2;
     private const int text_draw_length = draw_length / 3;
-    private const byte black_threshold = 96;
+    private const byte BlackThreshold = 96;
 
     public static async IAsyncEnumerable<FontModel> DiscoverFontsAsync(string directory, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
@@ -146,12 +148,6 @@ public static class FontManager
 
     public static async Task WriteMNISTAsync(string font_directory, FontModel[] fonts, IProgress<int> progress, CancellationToken cancellationToken = default)
     {
-        const int threads = 31;
-        using SemaphoreSlim semaphore_font = new(1);
-        using SemaphoreSlim semaphore = new(threads);
-
-        List<Task> tasks = [];
-        tasks.Capacity = threads;
         int current = 0;
 
         using SKPaint paint = new()
@@ -161,17 +157,18 @@ public static class FontManager
             ColorFilter = CreateContrastFilter(32)
         };
 
+        await using Stream zip_stream = new FileStream(App.DestinationZipPath, FileMode.Create);
+        using ZipArchive zip = new(zip_stream, ZipArchiveMode.Create, leaveOpen: false);
+
         for (int i = 0; i < fonts.Length; i++)
         {
-            await semaphore_font.WaitAsync(cancellationToken);
-            using SemaphoreRelease release_font = new(semaphore_font);
-
             FontModel font = fonts[i];
 
             if (File.Exists(font.Path) is false)
             {
                 continue;
             }
+
             string category = font.Category.ToString().ToLower().Replace('_', '-');
             string style = font.Style.ToString().ToLower();
             string font_name = Path.GetFileNameWithoutExtension(font.Path);
@@ -186,28 +183,25 @@ public static class FontManager
 
                 for (int m = 0; m < RotationSteps; m++)
                 {
-                    await semaphore.WaitAsync(cancellationToken);
                     progress?.Report(++current);
 
                     float rotation = MinRotation + m * RotationStepSize + offset_rotation;
                     string char_folder = char.IsDigit(character) ? $"digit_{character}" : (char.IsUpper(character) ? $"upper_{char.ToUpperInvariant(character)}" : $"lower_{char.ToLowerInvariant(character)}");
-
-                    string character_file = Path.Combine(font_directory, char_folder, $"{font_name}-({rotation}°)[{category},{style}, {font.Weight}].png");
-                    Task task = Task.Run(() => WriteCharFile(character_file, character, rotation, semaphore, sk_font, paint), cancellationToken);
-                    tasks.Add(task);
+                    string file_name = $"{font_name}-({rotation}°)[{category},{style}, {font.Weight}].png";
+                    string folder_name = Random.Shared.NextDouble() >= 0.1 ? "train" : "test";
+                    string character_file = $"{folder_name}/{char_folder}/{file_name}";
+                    
+                    byte[] char_data = await Task.Run(() => GetCharData(character, rotation, sk_font, paint), cancellationToken);
+                    ZipArchiveEntry char_entry = zip.CreateEntry(character_file, CompressionLevel.Optimal);
+                    await using Stream char_stream = char_entry.Open();
+                    char_stream.Write(char_data, 0, char_data.Length);
                 }
             }
-
-            await Task.WhenAll(tasks);
-            tasks.Clear();
         }
     }
 
-    private static void WriteCharFile(string character_file, char character, float rotation, SemaphoreSlim semaphore, SKFont sk_font, SKPaint paint)
+    private static byte[] GetCharData(char character, float rotation, SKFont sk_font, SKPaint paint)
     {
-
-        Directory.CreateDirectory(Path.GetDirectoryName(character_file));
-        using SemaphoreRelease release = new(semaphore);
         using SKBitmap bitmap = new(draw_length, draw_length);
         using SKCanvas canvas = new(bitmap);
 
@@ -235,10 +229,10 @@ public static class FontManager
 
         SKRectI placement = new(x_shift, y_shift, x_shift + width, y_shift + height);
         char_canvas.DrawBitmap(bitmap, bounding_box, placement);
-        Binarize(bitmap, new SKRectI(0,0, CharSize, CharSize));
+        Binarize(bitmap, new SKRectI(0, 0, CharSize, CharSize));
         using SKImage image = SKImage.FromBitmap(char_bitmap);
         using SKData image_data = image.Encode(SKEncodedImageFormat.Png, 100);
-        File.WriteAllBytes(character_file, image_data.ToArray());
+        return image_data.ToArray();
     }
 
     private static SKRectI GetBounds(SKBitmap bitmap)
@@ -255,7 +249,7 @@ public static class FontManager
                 SKColor color = bitmap.GetPixel(x, y);
                 byte brightness = (byte)((color.Alpha * (0.299f * color.Red + 0.587f * color.Green + 0.114f * color.Blue)) / 255);
 
-                if (brightness < black_threshold)
+                if (brightness < BlackThreshold)
                 {
                     x_min = Math.Min(x, x_min);
                     y_min = Math.Min(y, y_min);
@@ -276,7 +270,7 @@ public static class FontManager
             {
                 SKColor color = bitmap.GetPixel(x, y);
                 byte brightness = (byte)((color.Alpha * (0.299f * color.Red + 0.587f * color.Green + 0.114f * color.Blue)) / 255);
-                SKColor binarized_color = brightness < black_threshold ? SKColors.Black : SKColors.White;
+                SKColor binarized_color = brightness < BlackThreshold ? SKColors.Black : SKColors.White;
                 bitmap.SetPixel(x, y, binarized_color);
             }
         }
